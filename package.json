@@ -1,0 +1,28 @@
+{
+  "name": "whatsapp-birthday-reminder",
+  "version": "1.0.0",
+  "description": "Send WhatsApp reminders about friends' birthdays using whatsapp-web.js and a daily cron job.",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "start:dev": "NODE_ENV=development node src/index.js"
+  },
+  "keywords": [
+    "whatsapp",
+    "birthday",
+    "reminder",
+    "automation"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "csv-parse": "^5.5.6",
+    "dayjs": "^1.11.18",
+    "dotenv": "^16.6.1",
+    "node-cron": "^3.0.3",
+    "puppeteer": "^24.19.0",
+    "qrcode-terminal": "^0.12.0",
+    "whatsapp-web.js": "^1.33.3"
+  }
+}
