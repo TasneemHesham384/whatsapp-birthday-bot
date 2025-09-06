@@ -22,8 +22,8 @@ const SEND_TO_BIRTHDAY_PERSONS =
   String(process.env.SEND_TO_BIRTHDAY_PERSONS || "true").toLowerCase() ===
   "true";
 const FEB29_HANDLING = (process.env.FEB29_HANDLING || "feb28").toLowerCase();
-const MAX_RETRIES = 3; // عدد محاولات إعادة الإرسال
-const GROUP_NAME = "جروب"; //  هنا اسم الجروب بالظبط
+const MAX_RETRIES = 3;
+const GROUP_NAME = "جروب";
 
 const __dirname = path
   .dirname(new URL(import.meta.url).pathname)
@@ -42,22 +42,19 @@ const client = new Client({
 });
 
 client.on("qr", (qr) => {
-  console.log("📱 امسحي الكود ده بالواتساب:");
+  console.log("📱 امسح الكود ده بالواتساب:");
   qrcode.generate(qr, { small: true });
 });
 
 client.on("ready", async () => {
   console.log("✅ WhatsApp client جاهز!");
 
-  // تحديد الجروب الهدف
   try {
     const chats = await client.getChats();
     const group = chats.find((c) => c.isGroup && c.name === GROUP_NAME);
     if (group) {
       targetGroupId = group.id._serialized;
       console.log(`➡️ الجروب موجود: ${GROUP_NAME}`);
-
-      // ➡️ رسالة تجريبية للجروب
       await safeSendMessage(targetGroupId, "✅ رسالة تجريبية من البوت");
     } else {
       console.warn(
@@ -68,12 +65,13 @@ client.on("ready", async () => {
     console.error("❌ مشكلة في جلب الجروبات:", e.message);
   }
 
-  // ➡️ رسالة تجريبية للمالك
   if (OWNER_NUMBER) {
-    await safeSendMessage(toWhatsAppId(OWNER_NUMBER), "✅ رسالة تجريبية للمالك");
+    await safeSendMessage(
+      toWhatsAppId(OWNER_NUMBER),
+      "✅ رسالة تجريبية للمالك"
+    );
   }
 
-  // تشغيل الريمايندر فورًا بعد التشغيل
   await runDailyJob();
 });
 
@@ -121,8 +119,7 @@ function loadBirthdays(dataDir, countryCode) {
 }
 
 function buildMessage(todayStr, todaysList) {
-  if (!todaysList.length) return null; // لو مفيش أعياد ميلاد
-
+  if (!todaysList.length) return null;
   const lines = [`🎉 تذكير أعياد ميلاد اليوم (${todayStr})`];
   todaysList.forEach((p, idx) => {
     lines.push(`${idx + 1}. ${p.name}${p.number ? " — +" + p.number : ""}`);
@@ -169,13 +166,9 @@ async function runDailyJob() {
 
   console.log("📨 الرسالة النهائية اللي هتبعت:\n" + msg);
 
-  // ➡️ للمالك
   if (OWNER_NUMBER) await safeSendMessage(toWhatsAppId(OWNER_NUMBER), msg);
-
-  // ➡️ للجروب
   if (targetGroupId) await safeSendMessage(targetGroupId, msg);
 
-  // ➡️ للأشخاص
   if (SEND_TO_BIRTHDAY_PERSONS) {
     for (const p of todays) {
       if (!p.number) continue;
