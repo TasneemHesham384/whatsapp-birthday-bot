@@ -1,3 +1,4 @@
+// src/index.js
 import "dotenv/config";
 import fs from "fs";
 import path from "path";
@@ -7,6 +8,8 @@ import utc from "dayjs/plugin/utc.js";
 import tz from "dayjs/plugin/timezone.js";
 import qrcode from "qrcode-terminal";
 import pkg from "whatsapp-web.js";
+import os from "os";
+import express from "express";
 
 const { Client, LocalAuth } = pkg;
 
@@ -22,23 +25,37 @@ const SEND_TO_BIRTHDAY_PERSONS =
   String(process.env.SEND_TO_BIRTHDAY_PERSONS || "true").toLowerCase() ===
   "true";
 const FEB29_HANDLING = (process.env.FEB29_HANDLING || "feb28").toLowerCase();
+const GROUP_NAME = process.env.GROUP_NAME || "جروب";
 const MAX_RETRIES = 3;
-const GROUP_NAME = "جروب";
 
 const __dirname = path
   .dirname(new URL(import.meta.url).pathname)
   .replace(/^\/([A-Za-z]):/, "$1:");
 const DATA_DIR = path.join(__dirname, "data");
+if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
 
 let targetGroupId = null;
 
 // ----------------- CLIENT -----------------
+const isWindows = os.platform() === "win32";
+
 const client = new Client({
   authStrategy: new LocalAuth({ clientId: "birthday-bot" }),
-  puppeteer: {
-    headless: true,
-    args: ["--no-sandbox", "--disable-setuid-sandbox"],
-  },
+  puppeteer: isWindows
+    ? { headless: false } // محلي: Chrome يفتح
+    : {
+        headless: true, // سيرفر: headless
+        args: [
+          "--no-sandbox",
+          "--disable-setuid-sandbox",
+          "--disable-dev-shm-usage",
+          "--disable-accelerated-2d-canvas",
+          "--no-first-run",
+          "--no-zygote",
+          "--single-process",
+          "--disable-gpu",
+        ],
+      },
 });
 
 client.on("qr", (qr) => {
@@ -57,9 +74,7 @@ client.on("ready", async () => {
       console.log(`➡️ الجروب موجود: ${GROUP_NAME}`);
       await safeSendMessage(targetGroupId, "✅ رسالة تجريبية من البوت");
     } else {
-      console.warn(
-        `❌ الجروب "${GROUP_NAME}" مش موجود. الرسائل هتتبعت للمالك والأشخاص بس.`
-      );
+      console.warn(`❌ الجروب "${GROUP_NAME}" مش موجود.`);
     }
   } catch (e) {
     console.error("❌ مشكلة في جلب الجروبات:", e.message);
@@ -160,7 +175,7 @@ async function runDailyJob() {
   const msg = buildMessage(todayStr, todays);
 
   if (!msg) {
-    console.log("📭 النهارده مفيش أي أعياد ميلاد، البوت مش هيبعت حاجة.");
+    console.log("📭 النهارده مفيش أي أعياد ميلاد.");
     return;
   }
 
@@ -186,5 +201,15 @@ cron.schedule(
 );
 
 console.log(`🗓️ تم جدولة التذكير: "${DAILY_CRON}" على التايم زون ${TZ}`);
+
+// ----------------- EXPRESS (Dashboard) -----------------
+const app = express();
+app.get("/", (req, res) => {
+  res.send("<h1>✅ WhatsApp Birthday Bot شغال!</h1>");
+});
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`🌍 افتحي http://localhost:${PORT} في المتصفح`);
+});
 
 client.initialize();
